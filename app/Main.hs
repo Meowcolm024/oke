@@ -1,6 +1,6 @@
 module Main where
 
-import Lib
+import Oke (test)
 
 main :: IO ()
-main = putTextLn hello
+main = test
