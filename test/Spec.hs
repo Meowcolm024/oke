@@ -1,2 +1,2 @@
 main :: IO ()
-main = putTextLn "TODO"
+main = putTextLn "TODO: Test suite"

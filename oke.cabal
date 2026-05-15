@@ -45,6 +45,7 @@ common shared
     base >=4.7 && <5,
     effectful >=2.6 && <3,
     optparse-applicative >=0.18 && <0.19,
+    path >=0.9 && <0.10,
     relude >=1.0,
     req >=3.13 && <4,
     sqlite-simple >=0.4 && <0.5,
