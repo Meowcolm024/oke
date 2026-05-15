@@ -1,0 +1,7 @@
+{
+  "search.useIgnoreFiles": true,
+  "editor.formatOnSave": true,
+  "haskell.manageHLS": "PATH",
+  "nix.enableLanguageServer": true,
+  "nix.serverPath": "nil"
+}
