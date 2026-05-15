@@ -17,9 +17,8 @@
 
         # Packages to be added to Nix devShell go here.
         packages = with pkgs; [
-          just
           nil
-          ghciwatch
+          nix-output-monitor
           zlib
         ];
       };

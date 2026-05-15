@@ -70,3 +70,6 @@ test-suite oke-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   hs-source-dirs: test
+  build-depends:
+    oke,
+    hspec >= 2.11 && < 3

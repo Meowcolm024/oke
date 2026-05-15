@@ -18,6 +18,19 @@
       # has only one.
       # See https://github.com/srid/haskell-flake/blob/master/example/flake.nix
       haskellProjects.default = {
+        projectRoot = builtins.toString (
+          lib.fileset.toSource {
+            inherit root;
+            fileset = lib.fileset.unions [
+              (root + /app)
+              (root + /src)
+              (root + /test)
+              (root + /oke.cabal)
+              (root + /LICENSE)
+              (root + /README.md)
+            ];
+          }
+        );
 
         # The base package set (this value is the default)
         basePackages = pkgs.haskell.packages.ghc910;
@@ -36,6 +49,7 @@
         settings = {
           oke = {
             stan = true;
+            # check = true;
           };
         };
 
@@ -48,7 +62,7 @@
       };
 
       # Default package & app.
-      packages.default = self'.packages.oke;
+      packages.default = pkgs.haskell.lib.justStaticExecutables self'.packages.oke;
       apps.default = self'.apps.oke;
     };
 }

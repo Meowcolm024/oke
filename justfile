@@ -10,6 +10,6 @@ docs:
 repl *ARGS:
     cabal repl {{ ARGS }}
 
-# Run ghcid -- auto-recompile and run `main` function
-run:
-    ghcid -T :main
+# run nix build
+build:
+    nix build .#oke --log-format internal-json -v |& nom --json
