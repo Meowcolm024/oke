@@ -2,27 +2,32 @@ module Oke.App.Runner where
 
 import Control.Exception (bracket)
 import Effectful (runEff)
+import Formatting ((%))
+import Formatting qualified as F
+import Oke.App.Bootstrap
 import Oke.App.CLI (getCli)
-import Oke.App.Context
 import Oke.App.Logging
+import Oke.Effect.Console
 import Oke.Effect.Log
-import System.Log.Logger (Logger)
 
 test :: IO ()
 test = bracket initApp cleanupApp $
-  \(hello, ctx, logger) -> runEff . runLog logger $ do
+  \(hello, ctx, logger) -> runEff . runConsole . runLog logger $ do
     logDbg "Computing things..."
     logDbg "Sleeping..."
     logWarn "Computing more things..."
-    logInfo $ hello <> " World"
+    printf (F.stext % " World\n") hello
     logInfo (show ctx)
+    printf "enter anything: " *> flush
+    msg <- getLn
+    printf ("input: " % F.stext % "\n") msg
 
-initApp :: IO (Text, Context, Logger)
+initApp :: IO (Text, Bootstrap, Logger)
 initApp = do
+  ctx <- bootstrap
   hello <- getCli
-  ctx <- newContext
-  logger <- newLogger (mkLogPath ctx.dirs.xdgState)
+  logger <- newLogger (mkLogPath ctx.xdgDirs.xdgState)
   pure $ (hello, ctx, logger)
 
-cleanupApp :: (Text, Context, Logger) -> IO ()
-cleanupApp (_, ctx, _) = cleanupLogger (mkLogPath ctx.dirs.xdgState)
+cleanupApp :: (Text, Bootstrap, Logger) -> IO ()
+cleanupApp (_, ctx, _) = cleanupLogger (mkLogPath ctx.xdgDirs.xdgState)

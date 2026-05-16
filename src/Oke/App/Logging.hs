@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Oke.App.Logging (mkLogPath, newLogger, cleanupLogger) where
+module Oke.App.Logging (Logger, mkLogPath, newLogger, cleanupLogger) where
 
 import Data.ByteString qualified as B
 import Path
@@ -9,6 +9,7 @@ import System.IO
 import System.Log.Formatter (simpleLogFormatter)
 import System.Log.Handler (LogHandler (setFormatter))
 import System.Log.Handler.Simple (fileHandler, streamHandler)
+import System.Log.Logger (Logger)
 import System.Log.Logger qualified as L
 
 type LogPath = Path Abs File
@@ -16,7 +17,7 @@ type LogPath = Path Abs File
 mkLogPath :: Path Abs Dir -> LogPath
 mkLogPath dir = dir </> $(mkRelFile "oke.log")
 
-newLogger :: LogPath -> IO L.Logger
+newLogger :: LogPath -> IO Logger
 newLogger logPath = do
   chdl <- streamHandler stdout L.INFO
   let chFmt = setFormatter chdl (simpleLogFormatter "[$prio] $msg")

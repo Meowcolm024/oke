@@ -2,7 +2,7 @@ module Oke.Effect.Log (Log, runLog, logDbg, logInfo, logWarn, logErr) where
 
 import Data.Text qualified as T
 import Effectful
-import Effectful.Dispatch.Dynamic
+import Effectful.Dispatch.Dynamic (interpret, send)
 import System.Log.Logger qualified as L
 
 data Log :: Effect where
