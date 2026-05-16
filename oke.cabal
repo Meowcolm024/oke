@@ -70,6 +70,7 @@ library
     Oke.App.Config
     Oke.App.Context
     Oke.App.Runner
+    Oke.App.Logging
     Oke.Effect
     Oke.Effect.Log
 
