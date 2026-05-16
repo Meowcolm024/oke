@@ -1,9 +1,8 @@
-{-# LANGUAGE TemplateHaskell #-}
-
-module Context
+module Oke.App.Context
   ( Context (..),
     newContext,
-    Dirs (..),
+    newLogger,
+    XdgDirs (..),
     SupportedOS (..),
     SupportedArch (..),
     Platform (..),
@@ -23,18 +22,17 @@ import System.Posix.User (getEffectiveUserID)
 import System.Process (readProcess)
 
 data Context = Context
-  { dirs :: Dirs,
-    platform :: Platform,
-    logger :: L.Logger
+  { dirs :: XdgDirs,
+    platform :: Platform
   }
+  deriving stock (Show, Eq)
 
 newContext :: IO Context
 newContext = do
   abortAtRoot
-  dirs <- newDirs
-  platform <- newPlatform
-  logger <- newLogger (xdgState dirs </> $(mkRelFile "oke.log"))
-  pure $ Context dirs platform logger
+  dirs <- initXdgDirs
+  platform <- initPlatform
+  pure $ Context dirs platform
 
 abortAtRoot :: IO ()
 abortAtRoot = do
@@ -42,22 +40,22 @@ abortAtRoot = do
   when (euid == 0) $
     fatal "This program should not be run as root!"
 
-data Dirs = Dirs
+data XdgDirs = XdgDirs
   { xdgState :: Path Abs Dir,
     xdgConfig :: Path Abs Dir,
     xdgCache :: Path Abs Dir
   }
   deriving stock (Show, Eq)
 
-newDirs :: IO Dirs
-newDirs = do
+initXdgDirs :: IO XdgDirs
+initXdgDirs = do
   xdgState <- parseAbsDir =<< getXdgDirectory XdgState "oke"
   xdgConfig <- parseAbsDir =<< getXdgDirectory XdgConfig "oke"
   xdgCache <- parseAbsDir =<< getXdgDirectory XdgCache "oke"
   createDirectoryIfMissing False (fromAbsDir xdgState)
   createDirectoryIfMissing False (fromAbsDir xdgConfig)
   createDirectoryIfMissing False (fromAbsDir xdgCache)
-  pure $ Dirs xdgState xdgConfig xdgCache
+  pure $ XdgDirs xdgState xdgConfig xdgCache
 
 data SupportedOS = Darwin | Linux deriving stock (Show, Eq)
 
@@ -70,8 +68,8 @@ data Platform = Platform
   }
   deriving stock (Show, Eq)
 
-newPlatform :: IO Platform
-newPlatform = do
+initPlatform :: IO Platform
+initPlatform = do
   os <- case Info.os of
     "darwin" -> pure Darwin
     "linux" -> pure Linux
@@ -92,6 +90,9 @@ getMajorVer ver = do
       Just v -> pure v
       Nothing -> fatal $ "Failed to parse major version: " <> T.pack ver
 
+fatal :: T.Text -> IO a
+fatal msg = hPutStrLn stderr ("[Fatal] " <> msg) >> exitFailure
+
 newLogger :: Path Abs File -> IO L.Logger
 newLogger path = do
   chdl <- streamHandler stdout L.INFO
@@ -100,6 +101,3 @@ newLogger path = do
   let fhFmt = setFormatter fhdl (simpleLogFormatter "$time [$prio] $msg")
   L.updateGlobalLogger L.rootLoggerName (L.setLevel L.DEBUG . L.setHandlers [chFmt, fhFmt])
   L.getRootLogger
-
-fatal :: T.Text -> IO a
-fatal msg = hPutStrLn stderr ("[Fatal] " <> msg) >> exitFailure

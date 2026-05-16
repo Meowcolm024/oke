@@ -1,4 +1,4 @@
-module Oke.Log (Log, runLog, logDbg, logInfo, logWarn, logErr) where
+module Oke.Effect.Log (Log, runLog, logDbg, logInfo, logWarn, logErr) where
 
 import Data.Text qualified as T
 import Effectful
