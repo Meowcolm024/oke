@@ -1,6 +1,6 @@
 module Oke.App.Bootstrap
   ( Bootstrap (..),
-    bootstrap,
+    getBootstrap,
     XdgDirs (..),
     OSType (..),
     ArchType (..),
@@ -13,6 +13,7 @@ import Data.Text.IO (hPutStrLn)
 import Path
 import System.Directory
 import System.Info qualified as Info
+import System.Posix.Unistd (SystemID (release), getSystemID)
 import System.Posix.User (getEffectiveUserID, getEffectiveUserName)
 import System.Process (readProcess)
 import Text.Show qualified as TS
@@ -24,8 +25,8 @@ data Bootstrap = Bootstrap
   }
   deriving stock (Show, Eq)
 
-bootstrap :: IO Bootstrap
-bootstrap = do
+getBootstrap :: IO Bootstrap
+getBootstrap = do
   abortAtRoot
   dirs <- getXdgDirs
   platform <- getPlatform
@@ -83,10 +84,12 @@ getPlatform = do
   arch <- case Info.arch of
     "aarch64" -> pure ARM
     "x86_64" -> pure X86
-    str -> fatal $ "unsupported arch: " <> T.pack str
+    str -> fatal $ "Unsupported arch: " <> T.pack str
   majorVer <- case os of
+    -- TODO directly get ProductVersion from SystemVersion.plist
+    -- maybe we need libplist ffi
     Darwin -> readProcess "sw_vers" ["-productVersion"] "" >>= getMajorVer
-    Linux -> readProcess "uname" ["-r"] "" >>= getMajorVer
+    Linux -> (release <$> getSystemID) >>= getMajorVer
   pure $ Platform os arch majorVer
 
 getMajorVer :: String -> IO Int
@@ -94,7 +97,9 @@ getMajorVer ver = do
   case span (/= '.') ver of
     (major, _) -> case readMaybe major of
       Just v -> pure v
-      Nothing -> fatal $ "Failed to parse major version: " <> T.pack ver
+      Nothing -> do
+        hPutStrLn stderr $ "Failed to parse major version: " <> T.pack ver
+        pure (-1)
 
 fatal :: Text -> IO a
-fatal msg = hPutStrLn stderr ("[Fatal] " <> msg) >> exitFailure
+fatal msg = hPutStrLn stderr ("[Fatal] " <> msg) *> exitFailure

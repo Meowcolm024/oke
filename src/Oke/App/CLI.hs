@@ -1,10 +1,14 @@
-module Oke.App.CLI (getCli) where
+module Oke.App.CLI (getCLI, CLI (..)) where
 
 import Options.Applicative
 
--- TODO cli options and parser
+data CLI = Doctor
+  deriving stock (Show, Eq)
 
-getCli :: IO Text
-getCli = execParser $ info (pure "Hello" <**> helper) desc
+getCLI :: IO CLI
+getCLI = execParser $ info (options <**> helper) desc
   where
     desc = fullDesc <> header "oke - install homebrew casks without homebrew :D"
+
+options :: Parser CLI
+options = subparser (command "doctor" (info (pure Doctor) (progDesc "Print program info")))

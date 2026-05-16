@@ -19,7 +19,9 @@
         packages = with pkgs; [
           nil
           nix-output-monitor
+          pkg-config
           zlib
+          libplist
         ];
       };
     };

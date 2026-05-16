@@ -73,7 +73,7 @@ library
     Oke.App.Context
     Oke.App.Logging
     Oke.App.Runner
-    Oke.Effect
+    Oke.Core.Doctor
     Oke.Effect.Console
     Oke.Effect.Log
 
