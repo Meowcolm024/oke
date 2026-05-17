@@ -1,14 +1,10 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Oke.App.Config where
+module Oke.Bootstrap.Config where
 
 import Path
 
 type ConfigPath = Path Abs File
-
--- TODO maybe accept both .yaml and .yml
-mkConfigPath :: Path Abs Dir -> ConfigPath
-mkConfigPath dir = dir </> $(mkRelFile "config.yaml")
 
 data Config = Config
   {

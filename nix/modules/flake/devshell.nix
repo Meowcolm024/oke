@@ -15,13 +15,19 @@
           config.haskellProjects.default.outputs.devShell
         ];
 
+        nativeBuildInputs = with pkgs; [
+          pkg-config
+        ];
+
+        buildInputs = with pkgs; [
+          zlib
+          libplist
+        ];
+
         # Packages to be added to Nix devShell go here.
         packages = with pkgs; [
           nil
           nix-output-monitor
-          pkg-config
-          zlib
-          libplist
         ];
       };
     };

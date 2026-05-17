@@ -1,6 +1,6 @@
 module Main where
 
-import Oke (test)
+import Oke qualified
 
 main :: IO ()
-main = test
+main = Oke.main

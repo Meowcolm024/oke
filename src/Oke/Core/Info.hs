@@ -1,0 +1,28 @@
+module Oke.Core.Info where
+
+import Data.Versions (prettyV)
+import Effectful
+import Formatting ((%))
+import Formatting qualified as F
+import Oke.Bootstrap.System
+import Oke.Effect.Console
+import Oke.Effect.Context
+import Oke.Effect.Log
+import Oke.Util.Misc (okeVersion)
+import Path (fromAbsFile)
+
+info :: forall es. (Log :> es, Console :> es, Ctx :> es) => Eff es ()
+info = do
+  ctx <- getContext
+  logDbg "show info"
+  printfn ("Version: " % F.stext) okeVersion
+  printfn
+    ("System info: " % F.stext % " (" % F.stext % ") " % F.stext)
+    ( case ctx.system.platform.os of
+        Darwin -> "macOS"
+        Linux -> "linux"
+    )
+    (show ctx.system.platform.arch)
+    (maybe "<unknown>" prettyV ctx.system.platform.ver)
+  printfn ("Log location: " % F.string) (fromAbsFile ctx.logPath)
+  printfn ("Config location: " % F.string) (fromAbsFile ctx.configPath)

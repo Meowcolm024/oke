@@ -1,6 +1,6 @@
-module Oke.App.Bootstrap
-  ( Bootstrap (..),
-    getBootstrap,
+module Oke.Bootstrap.System
+  ( System (..),
+    getSystem,
     XdgDirs (..),
     OSType (..),
     ArchType (..),
@@ -10,6 +10,7 @@ where
 
 import Data.Text qualified as T
 import Data.Text.IO (hPutStrLn)
+import Data.Versions qualified as V
 import Path
 import System.Directory
 import System.Info qualified as Info
@@ -18,20 +19,20 @@ import System.Posix.User (getEffectiveUserID, getEffectiveUserName)
 import System.Process (readProcess)
 import Text.Show qualified as TS
 
-data Bootstrap = Bootstrap
+data System = System
   { xdgDirs :: !XdgDirs,
     platform :: !Platform,
     user :: Text
   }
   deriving stock (Show, Eq)
 
-getBootstrap :: IO Bootstrap
-getBootstrap = do
+getSystem :: IO System
+getSystem = do
   abortAtRoot
   dirs <- getXdgDirs
   platform <- getPlatform
   user <- getEffectiveUserName
-  pure $ Bootstrap dirs platform (T.pack user)
+  pure $ System dirs platform (T.pack user)
 
 abortAtRoot :: IO ()
 abortAtRoot = do
@@ -71,7 +72,7 @@ instance TS.Show ArchType where
 data Platform = Platform
   { os :: !OSType,
     arch :: !ArchType,
-    majorVer :: !Int
+    ver :: !(Maybe V.Versioning)
   }
   deriving stock (Show, Eq)
 
@@ -85,21 +86,17 @@ getPlatform = do
     "aarch64" -> pure ARM
     "x86_64" -> pure X86
     str -> fatal $ "Unsupported arch: " <> T.pack str
-  majorVer <- case os of
+  ver <- case os of
     -- TODO directly get ProductVersion from SystemVersion.plist
     -- maybe we need libplist ffi
-    Darwin -> readProcess "sw_vers" ["-productVersion"] "" >>= getMajorVer
-    Linux -> (release <$> getSystemID) >>= getMajorVer
-  pure $ Platform os arch majorVer
+    Darwin -> parseVer . T.pack <$> readProcess "sw_vers" ["-productVersion"] ""
+    Linux -> parseVer . T.pack . release <$> getSystemID
+  pure $ Platform os arch ver
 
-getMajorVer :: String -> IO Int
-getMajorVer ver = do
-  case span (/= '.') ver of
-    (major, _) -> case readMaybe major of
-      Just v -> pure v
-      Nothing -> do
-        hPutStrLn stderr $ "Failed to parse major version: " <> T.pack ver
-        pure (-1)
+parseVer :: Text -> Maybe V.Versioning
+parseVer ver = case V.versioning (T.strip ver) of
+  Right v -> pure v
+  Left _ -> Nothing -- ignore parse error
 
 fatal :: Text -> IO a
 fatal msg = hPutStrLn stderr ("[Fatal] " <> msg) *> exitFailure
