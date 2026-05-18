@@ -8,15 +8,17 @@ module Oke.Bootstrap.System
   )
 where
 
+import Control.Exception (catch)
 import Data.Text qualified as T
 import Data.Text.IO (hPutStrLn)
+import Data.Text.IO qualified as T
 import Data.Versions qualified as V
+import Oke.Util.Plist qualified as P
 import Path
 import System.Directory
 import System.Info qualified as Info
 import System.Posix.Unistd (SystemID (release), getSystemID)
 import System.Posix.User (getEffectiveUserID, getEffectiveUserName)
-import System.Process (readProcess)
 import Text.Show qualified as TS
 
 data System = System
@@ -86,17 +88,24 @@ getPlatform = do
     "aarch64" -> pure ARM
     "x86_64" -> pure X86
     str -> fatal $ "Unsupported arch: " <> T.pack str
-  ver <- case os of
-    -- TODO directly get ProductVersion from SystemVersion.plist
-    -- maybe we need libplist ffi
-    Darwin -> parseVer . T.pack <$> readProcess "sw_vers" ["-productVersion"] ""
-    Linux -> parseVer . T.pack . release <$> getSystemID
+  ver <- catch (parseVer <$> getOSVer os) $ \(_ :: SomeException) -> do
+    hPutStrLn stderr "Failed to retrive OS version."
+    pure Nothing
   pure $ Platform os arch ver
 
 parseVer :: Text -> Maybe V.Versioning
 parseVer ver = case V.versioning (T.strip ver) of
   Right v -> pure v
   Left _ -> Nothing -- ignore parse error
+
+getOSVer :: OSType -> IO Text
+getOSVer os = case os of
+  Linux -> T.pack . release <$> getSystemID
+  Darwin -> do
+    xml <- T.readFile "/System/Library/CoreServices/SystemVersion.plist"
+    P.withPlistXML xml $ \node -> do
+      verNode <- P.getDictItem node "ProductVersion"
+      P.getString verNode
 
 fatal :: Text -> IO a
 fatal msg = hPutStrLn stderr ("[Fatal] " <> msg) *> exitFailure

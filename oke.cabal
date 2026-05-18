@@ -79,9 +79,12 @@ library
     Oke.Effect.Context
     Oke.Effect.Log
     Oke.Util.Misc
+    Oke.Util.Plist
 
   other-modules: Paths_oke
   autogen-modules: Paths_oke
+  pkgconfig-depends:
+    libplist-2.0
 
 executable oke
   import: shared
