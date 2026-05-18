@@ -18,7 +18,7 @@ import Path
 import System.Directory
 import System.Info qualified as Info
 import System.Posix.Unistd (SystemID (release), getSystemID)
-import System.Posix.User (getEffectiveUserID, getEffectiveUserName)
+import System.Posix.User (getEffectiveUserName)
 import Text.Show qualified as TS
 
 data System = System
@@ -30,17 +30,10 @@ data System = System
 
 getSystem :: IO System
 getSystem = do
-  abortAtRoot
   dirs <- getXdgDirs
   platform <- getPlatform
   user <- getEffectiveUserName
   pure $ System dirs platform (T.pack user)
-
-abortAtRoot :: IO ()
-abortAtRoot = do
-  euid <- getEffectiveUserID
-  when (euid == 0) $
-    fatal "This program should not be run as root!"
 
 data XdgDirs = XdgDirs
   { xdgState :: Path Abs Dir,
@@ -89,7 +82,7 @@ getPlatform = do
     "x86_64" -> pure X86
     str -> fatal $ "Unsupported arch: " <> T.pack str
   ver <- catch (parseVer <$> getOSVer os) $ \(_ :: SomeException) -> do
-    hPutStrLn stderr "Failed to retrive OS version."
+    hPutStrLn stderr "Failed to retrive os version."
     pure Nothing
   pure $ Platform os arch ver
 

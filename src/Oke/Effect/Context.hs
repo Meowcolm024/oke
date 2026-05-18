@@ -1,8 +1,14 @@
-module Oke.Effect.Context (Ctx (..), runContext, getContext, Context (..)) where
+module Oke.Effect.Context
+  ( Ctx (..),
+    runContext,
+    getContext,
+    module Oke.Bootstrap.Context,
+  )
+where
 
 import Effectful
 import Effectful.Dispatch.Dynamic
-import Oke.Bootstrap.Context (Context (..))
+import Oke.Bootstrap.Context
 
 data Ctx :: Effect where
   Ctx :: forall m. Ctx m Context

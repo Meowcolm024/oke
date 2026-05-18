@@ -24,5 +24,6 @@ info = do
     )
     (show ctx.system.platform.arch)
     (maybe "<unknown>" prettyV ctx.system.platform.ver)
-  printfn ("Log location: " % F.string) (fromAbsFile ctx.logPath)
-  printfn ("Config location: " % F.string) (fromAbsFile ctx.configPath)
+  printfn ("Log location: " % F.string) (fromAbsFile . logPath $ ctx)
+  printfn ("Config location: " % F.string) (fromAbsFile . configPath $ ctx)
+  printfn ("Registry location: " % F.string) (fromAbsFile . registryPath $ ctx)
