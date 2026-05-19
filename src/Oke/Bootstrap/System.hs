@@ -36,9 +36,9 @@ getSystem = do
   pure $ System dirs platform (T.pack user)
 
 data XdgDirs = XdgDirs
-  { xdgState :: Path Abs Dir,
-    xdgConfig :: Path Abs Dir,
-    xdgCache :: Path Abs Dir
+  { xdgState :: !(Path Abs Dir),
+    xdgConfig :: !(Path Abs Dir),
+    xdgCache :: !(Path Abs Dir)
   }
   deriving stock (Show, Eq)
 

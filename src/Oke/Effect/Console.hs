@@ -19,8 +19,6 @@ data Console :: Effect where
   ReadConsole :: forall m. Console m Text
   FlushConsole :: forall m. Console m ()
 
--- TODO ANSI
-
 type instance DispatchOf Console = Dynamic
 
 runConsole :: forall es a. (IOE :> es) => Eff (Console : es) a -> Eff es a

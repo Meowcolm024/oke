@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Oke.Bootstrap.Log (Logger, LogPath, mkLogger, cleanupLogger) where
+module Oke.Bootstrap.Log (Logger, mkLogger, cleanupLogger) where
 
 import Data.ByteString qualified as B
 import Path
@@ -12,9 +12,7 @@ import System.Log.Handler.Simple (fileHandler, streamHandler)
 import System.Log.Logger (Logger)
 import System.Log.Logger qualified as L
 
-type LogPath = Path Abs File
-
-mkLogger :: LogPath -> IO Logger
+mkLogger :: Path Abs File -> IO Logger
 mkLogger logPath = do
   chdl <- streamHandler stdout L.INFO
   let chFmt = setFormatter chdl (simpleLogFormatter "[$prio] $msg")
@@ -23,12 +21,12 @@ mkLogger logPath = do
   L.updateGlobalLogger L.rootLoggerName (L.setLevel L.DEBUG . L.setHandlers [chFmt, fhFmt])
   L.getRootLogger
 
-cleanupLogger :: LogPath -> IO ()
+cleanupLogger :: Path Abs File -> IO ()
 cleanupLogger logPath = do
   L.removeAllHandlers
   trimLogFile logPath
 
-trimLogFile :: LogPath -> IO ()
+trimLogFile :: Path Abs File -> IO ()
 trimLogFile absPath = do
   let path = fromAbsFile absPath
   exists <- doesFileExist path

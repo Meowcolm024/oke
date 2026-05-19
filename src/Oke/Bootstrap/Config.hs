@@ -4,8 +4,7 @@ module Oke.Bootstrap.Config where
 
 import Path
 
-type ConfigPath = Path Abs File
-
+-- TODO what config do we need?
 data Config = Config
   {
   }
