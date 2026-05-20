@@ -52,6 +52,7 @@ common shared
     hslogger >=1.3 && <2,
     http-client >=0.7 && <0.8,
     http-client-tls >=0.3 && <0.5,
+    http-types >=0.12 && <0.13,
     network-uri >=2.6 && <3,
     optparse-applicative >=0.18 && <0.19,
     path >=0.9 && <0.10,
@@ -77,6 +78,7 @@ library
     Oke.Bootstrap.System
     Oke.Core.Info
     Oke.Core.Registry
+    Oke.Effect.Acid
     Oke.Effect.Console
     Oke.Effect.Context
     Oke.Effect.Log
