@@ -6,15 +6,16 @@ data DryRun = DryRun | LiveRun
   deriving stock (Show, Eq)
 
 data CLI
-  = Info
-  | Update
-  | Version
+  = Update
   | Install Text DryRun
   | Uninstall Text DryRun
   | Upgrade Text DryRun
+  | Info Text
   | Query Text
   | Sync DryRun
   | ShellEnv
+  | Version
+  | Status
   deriving stock (Show, Eq)
 
 getCLI :: IO CLI
@@ -29,14 +30,15 @@ commands :: Parser CLI
 commands =
   subparser $
     mconcat
-      [ command "info" (info (pure Info) (progDesc "Print program info")),
-        command "update" (info (pure Update) (progDesc "Update cask.json with Homebrew API")),
+      [ command "update" (info (pure Update) (progDesc "Update cask.json with Homebrew API")),
         command "install" (info (Install <$> caskArg <*> dryRun) (progDesc "Install a cask")),
         command "uninstall" (info (Uninstall <$> caskArg <*> dryRun) (progDesc "Uninstall a cask")),
         command "upgrade" (info (Upgrade <$> caskArg <*> dryRun) (progDesc "Upgrade a cask")),
-        command "query" (info (Query <$> caskArg) (progDesc "Query info about a cask")),
+        command "query" (info (Query <$> caskArg) (progDesc "Query a cask from registry")),
+        command "info" (info (Info <$> caskArg) (progDesc "Show cask info")),
         command "sync" (info (Sync <$> dryRun) (progDesc "Sync declared casks")),
-        command "shell-env" (info (pure ShellEnv) (progDesc "Print shell environment exports"))
+        command "shell-env" (info (pure ShellEnv) (progDesc "Print shell environment exports")),
+        command "status" (info (pure Status) (progDesc "Print program status"))
       ]
 
 version :: Parser CLI
