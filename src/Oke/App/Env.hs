@@ -22,8 +22,8 @@ data Context = Context
   }
   deriving stock (Show, Eq)
 
-mkContext :: IO Context
-mkContext = do
+setupContext :: IO Context
+setupContext = do
   system <- getSystem
   cli <- getCLI
   _ <- getConfig (system.xdgDirs.xdgConfig)

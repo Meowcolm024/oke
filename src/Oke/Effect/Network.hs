@@ -19,7 +19,10 @@ data Network :: Effect where
 
 type instance DispatchOf Network = Dynamic
 
-runNetwork :: forall es a. (IOE :> es, FileSystem :> es, Log :> es) => C.Manager -> Eff (Network : es) a -> Eff es a
+runNetwork ::
+  forall es a.
+  (IOE :> es, FileSystem :> es, Log :> es) =>
+  C.Manager -> Eff (Network : es) a -> Eff es a
 runNetwork manager = interpret $ \_ -> \case
   (Request uri) -> do
     response <- liftIO $ do

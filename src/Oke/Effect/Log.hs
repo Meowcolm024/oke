@@ -36,8 +36,8 @@ logWarn = logM L.WARNING
 logErr :: forall es. (Log :> es) => Text -> Eff es ()
 logErr = logM L.ERROR
 
-mkLogger :: Path Abs File -> IO Logger
-mkLogger logPath = do
+setupLogger :: Path Abs File -> IO Logger
+setupLogger logPath = do
   chdl <- streamHandler stdout L.INFO
   let chFmt = setFormatter chdl (simpleLogFormatter "[$prio] $msg")
   fhdl <- fileHandler (fromAbsFile logPath) L.DEBUG

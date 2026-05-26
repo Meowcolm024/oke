@@ -9,13 +9,14 @@ import Oke.App.Env
 import Oke.Core.State (AppState, emptyAppState)
 import Oke.Effect
 import Oke.Effect.Store
+import System.FileLock (FileLock)
 import System.Log.Logger (Logger)
 import System.Posix.User (getEffectiveUserID)
 
 type App = Eff '[Store AppState, Network, Log, Ctx, FileSystem, Time, Console, IOE] ()
 
-runAppWith :: (Context, Logger, Manager) -> App -> IO ()
-runAppWith (ctx, logger, manager) =
+runAppWith :: (Context, Logger, Manager, FileLock) -> App -> IO ()
+runAppWith (ctx, logger, manager, lock) =
   runEff
     . runConsole
     . runTime
@@ -23,21 +24,23 @@ runAppWith (ctx, logger, manager) =
     . runCtx ctx
     . runLog logger
     . runNetwork manager
-    . runStore emptyAppState (statePath ctx)
+    . runStore lock (statePath ctx)
 
 runApp :: App -> IO ()
 runApp app = abortAtRoot *> bracket initApp cleanupApp (`runAppWith` app)
   where
-    initApp :: IO (Context, Logger, Manager)
+    initApp :: IO (Context, Logger, Manager, FileLock)
     initApp = do
-      ctx <- mkContext
-      logger <- mkLogger (logPath ctx)
+      ctx <- setupContext
+      logger <- setupLogger (logPath ctx)
       manager <- newTlsManager
-      setupStore emptyAppState (statePath ctx)
-      pure $ (ctx, logger, manager)
+      lock <- setupStore emptyAppState (statePath ctx)
+      pure (ctx, logger, manager, lock)
 
-    cleanupApp :: (Context, Logger, Manager) -> IO ()
-    cleanupApp (ctx, _, _) = cleanupLogger (logPath ctx)
+    cleanupApp :: (Context, Logger, Manager, FileLock) -> IO ()
+    cleanupApp (ctx, _, _, lock) = do
+      unlockStore lock
+      cleanupLogger (logPath ctx)
 
     abortAtRoot :: IO ()
     abortAtRoot = do
