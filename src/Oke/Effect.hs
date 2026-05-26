@@ -10,6 +10,8 @@ module Oke.Effect
     runTime,
     FileSystem,
     runFileSystem,
+    Store,
+    runStore,
   )
 where
 
@@ -20,6 +22,7 @@ import Oke.Effect.Console
 import Oke.Effect.FileSystem (FileSystem, runFileSystem)
 import Oke.Effect.Log
 import Oke.Effect.Network (Network, runNetwork)
+import Oke.Effect.Store (Store, runStore)
 import Oke.Effect.Time (Time, runTime)
 
 type Ctx = ER.Reader Context

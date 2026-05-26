@@ -1,15 +1,13 @@
 module Oke.Core.Query where
 
-import Data.Aeson (decode')
 import Data.Foldable (maximum)
 import Data.FuzzySet
 import Data.Text qualified as T
 import Effectful
-import Effectful.FileSystem.IO.ByteString.Lazy
-import Oke.App.Env (registryPath)
 import Oke.Core.Cask
+import Oke.Core.Registry (getRegistry)
+import Oke.Core.State (AppState)
 import Oke.Effect
-import Oke.Effect.FileSystem
 
 data QueryResult = QueryResult
   { score :: !Double,
@@ -30,27 +28,23 @@ queryCasks term registry = do
         Nothing -> pure []
         Just (score, _) -> pure [QueryResult score info]
 
-query :: forall es. (Log :> es, Console :> es, Ctx :> es, FileSystem :> es) => Text -> Eff es ()
+query ::
+  forall es.
+  (Log :> es, Console :> es, Ctx :> es, FileSystem :> es, Store AppState :> es, Time :> es) =>
+  Text -> Eff es ()
 query term = do
   logDbg $ "query: " <> term
-  ctx <- getCtx
-  exists <- doesFileExist (registryPath ctx)
-  if not exists
-    then
-      logInfo "cask.json not found! Run `oke update` to fetch one."
-    else do
-      withBinaryFile (registryPath ctx) ReadMode $ \handle -> do
-        reg <- hGetContents handle
-        case decode' @[CaskInfo] reg of
-          Nothing -> logErr "failed to parse cask.json"
-          Just info -> do
-            result <- queryCasks term info
-            logDbg (show result)
-            case result of
-              [] -> printLn "No results found."
-              rs ->
-                let colWidth = maximum $ map (T.length . token . caskInfo) rs
-                 in forM_ rs (printLn . formatRow colWidth)
+  reg <- getRegistry
+  case reg of
+    Nothing -> pure () -- do nothing
+    Just info -> do
+      result <- queryCasks term info
+      logDbg (show result)
+      case result of
+        [] -> printLn "No results found."
+        rs ->
+          let colWidth = maximum $ map (T.length . token . caskInfo) rs
+           in forM_ rs (printLn . formatRow colWidth)
 
 formatRow :: Int -> QueryResult -> Text
 formatRow colWidth (QueryResult {caskInfo = CaskInfo {token, name, version}}) =

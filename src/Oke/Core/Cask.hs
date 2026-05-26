@@ -4,6 +4,8 @@ module Oke.Core.Cask where
 
 import Data.Aeson
 
+type Registry = [CaskInfo]
+
 data CaskInfo = CaskInfo
   { token :: !Text,
     fullToken :: !Text,

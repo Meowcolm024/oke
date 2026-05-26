@@ -23,7 +23,7 @@ getModificationTime :: forall b es. (FileSystem :> es) => Path b File -> Eff es 
 getModificationTime path = FS.getModificationTime (toFilePath path)
 
 withBinaryFile :: forall a b es. (FileSystem :> es) => Path b File -> IOMode -> (Handle -> Eff es a) -> Eff es a
-withBinaryFile path mode handle = FSIO.withBinaryFile (toFilePath path) mode (handle)
+withBinaryFile path mode handle = FSIO.withBinaryFile (toFilePath path) mode handle
 
 hPutBS :: forall es. (FileSystem :> es) => Handle -> ByteString -> Eff es ()
 hPutBS handle bs = FSIOBS.hPut handle bs
