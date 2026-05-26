@@ -1,18 +1,13 @@
-module Oke.Bootstrap.System
-  ( System (..),
-    getSystem,
-    XdgDirs (..),
-    OSType (..),
-    ArchType (..),
-    Platform (..),
-  )
-where
+{-# LANGUAGE TemplateHaskell #-}
+
+module Oke.App.Env where
 
 import Control.Exception (catch)
 import Data.Text qualified as T
-import Data.Text.IO (hPutStrLn)
 import Data.Text.IO qualified as T
 import Data.Versions qualified as V
+import Oke.App.CLI
+import Oke.App.Config
 import Oke.Util.Plist qualified as P
 import Path
 import System.Directory
@@ -20,6 +15,32 @@ import System.Info qualified as Info
 import System.Posix.Unistd (SystemID (release), getSystemID)
 import System.Posix.User (getEffectiveUserName)
 import Text.Show qualified as TS
+
+data Context = Context
+  { system :: !System,
+    cli :: !CLI
+  }
+  deriving stock (Show, Eq)
+
+mkContext :: IO Context
+mkContext = do
+  system <- getSystem
+  cli <- getCLI
+  _ <- getConfig (system.xdgDirs.xdgConfig)
+  -- TODO config should be normalized
+  pure $ Context system cli
+
+logPath :: Context -> Path Abs File
+logPath ctx = ctx.system.xdgDirs.xdgState </> $(mkRelFile "oke.log")
+
+statePath :: Context -> Path Abs File
+statePath ctx = ctx.system.xdgDirs.xdgState </> $(mkRelFile "state.json")
+
+configPath :: Context -> Path Abs File
+configPath ctx = ctx.system.xdgDirs.xdgConfig </> $(mkRelFile "config.yaml")
+
+registryPath :: Context -> Path Abs File
+registryPath ctx = ctx.system.xdgDirs.xdgState </> $(mkRelFile "cask.json")
 
 data System = System
   { xdgDirs :: !XdgDirs,
@@ -82,7 +103,7 @@ getPlatform = do
     "x86_64" -> pure X86
     str -> fatal $ "Unsupported arch: " <> T.pack str
   ver <- catch (parseVer <$> getOSVer os) $ \(_ :: SomeException) -> do
-    hPutStrLn stderr "Failed to retrive os version."
+    T.hPutStrLn stderr "Failed to retrive os version."
     pure Nothing
   pure $ Platform os arch ver
 
@@ -101,4 +122,4 @@ getOSVer os = case os of
       P.getString verNode
 
 fatal :: Text -> IO a
-fatal msg = hPutStrLn stderr ("[Fatal] " <> msg) *> exitFailure
+fatal msg = T.hPutStrLn stderr ("[Fatal] " <> msg) *> exitFailure

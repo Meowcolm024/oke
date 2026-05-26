@@ -1,4 +1,4 @@
-module Oke.Bootstrap.CLI (CLI (..), getCLI) where
+module Oke.App.CLI (CLI (..), getCLI) where
 
 import Options.Applicative
 
@@ -6,6 +6,7 @@ data CLI
   = Info
   | Update
   | Version
+  -- TODO add install command
   deriving stock (Show, Eq)
 
 getCLI :: IO CLI

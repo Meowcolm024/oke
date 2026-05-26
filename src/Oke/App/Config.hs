@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Oke.Bootstrap.Config where
+module Oke.App.Config where
 
 import Path
 

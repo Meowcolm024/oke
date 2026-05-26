@@ -1,26 +1,21 @@
-module Oke.Effect.Network (Network, runNetwork, request, download, downloadWithProgress) where
+module Oke.Effect.Network (Network, runNetwork, request, downloadSimple, downloadWithStatus) where
 
 import Data.ByteString qualified as BS
-import Data.List (lookup)
+import Data.Text qualified as T
 import Effectful
 import Effectful.Dispatch.Dynamic
-import Effectful.FileSystem (FileSystem)
-import Effectful.FileSystem.IO (withBinaryFile)
-import Effectful.FileSystem.IO.ByteString qualified as FS
-import Effectful.FileSystem.IO.ByteString.Lazy qualified as LFS
 import Formatting ((%))
 import Formatting qualified as F
 import Network.HTTP.Client qualified as C
-import Network.HTTP.Types (hContentLength)
 import Network.URI (URI)
+import Oke.Effect.FileSystem
 import Oke.Effect.Log
 import Path
 import System.Console.ANSI
 
 data Network :: Effect where
-  Request :: forall m. URI -> Network m (C.Response LByteString)
-  Download :: forall m. URI -> Path Abs File -> Network m ()
-  DownloadWithProgress :: forall m. URI -> Path Abs File -> Network m ()
+  Request :: URI -> Network m (C.Response LByteString)
+  Download :: URI -> Path Abs File -> Maybe (Integer -> IO ()) -> Network m ()
 
 type instance DispatchOf Network = Dynamic
 
@@ -31,60 +26,52 @@ runNetwork manager = interpret $ \_ -> \case
       req <- C.requestFromURI uri
       C.httpLbs req manager
     pure response
-  (Download uri path) -> do
-    logDbg $ "Downloading from " <> (show uri)
-    response <- liftIO $ do
-      req <- C.requestFromURI uri
-      C.httpLbs req manager
-    LFS.writeFile (fromAbsFile path) (C.responseBody response)
-  (DownloadWithProgress uri path) -> do
-    logDbg $ "Downloading from " <> (show uri)
-    rawReq <- liftIO $ C.requestFromURI uri
-    let req = rawReq {C.decompress = const False}
-    withBinaryFile (fromAbsFile path) WriteMode $ \handle -> do
-      withRunInIO $ \run -> do
+  (Download uri path renderer) -> do
+    logDbg $ "Downloading from " <> show uri
+    req <- liftIO $ C.requestFromURI uri
+    withBinaryFile path WriteMode $ \handle ->
+      withRunInIO $ \run ->
         C.withResponse req manager $ \response -> do
-          let totalBytes = readMaybe @Int =<< (decodeUtf8 <$> lookup hContentLength (C.responseHeaders response))
-          run $ logDbg $ "Downloading file with total size: " <> (maybe "???" show totalBytes)
           let bodyReader = C.responseBody response
-          putText "Downloading..."
+          putText $ F.sformat ("Fetching " % F.string % " ...") (fromRelFile (filename path))
           hFlush stdout
-          let loop total downloaded = do
+          let loop downloaded = do
                 chunk <- C.brRead bodyReader
                 unless (BS.null chunk) $ do
-                  run $ FS.hPut handle chunk
+                  run $ hPutBS handle chunk
                   let downloaded' = downloaded + fromIntegral (BS.length chunk)
-                  progress total downloaded'
-                  loop total downloaded'
-          loop totalBytes 0
+                  case renderer of
+                    Just render -> render downloaded'
+                    Nothing -> pure ()
+                  loop downloaded'
+          loop 0
           putText "\n"
           hFlush stdout
 
 request :: forall es. (Network :> es) => URI -> Eff es (C.Response LByteString)
 request uri = send (Request uri)
 
-download :: forall es. (Network :> es) => URI -> Path Abs File -> Eff es ()
-download uri path = send (Download uri path)
+downloadSimple :: forall es. (Network :> es) => URI -> Path Abs File -> Eff es ()
+downloadSimple uri path = send (Download uri path Nothing)
 
-downloadWithProgress :: forall es. (Network :> es) => URI -> Path Abs File -> Eff es ()
-downloadWithProgress uri path = send (DownloadWithProgress uri path)
+downloadWithStatus :: forall es. (Network :> es) => URI -> Path Abs File -> Eff es ()
+downloadWithStatus uri path = send (Download uri path (Just render))
+  where
+    render bytes = do
+      clearLine
+      setCursorColumn 0
+      termWidth <- maybe 80 snd <$> getTerminalSize
+      let mbs = fromIntegral @Integer @Double bytes / 1024 / 1024
+      let file = fromRelFile (filename path)
+      let prefix = F.sformat ("Fetching " % F.string % " (" % F.fixed 2 % " MB) from ") file mbs
+      let uri' = T.pack $ truncateMiddle (max 0 (termWidth - T.length prefix)) (show uri)
+      putText $ prefix <> uri'
+      hFlush stdout
 
--- TODO parallel download
-
-progress :: Maybe Int -> Int -> IO ()
-progress Nothing _ = pure ()
-progress (Just total) downloaded = do
-  clearLine
-  setCursorColumn 0
-  let percent :: Double = (fromIntegral downloaded / fromIntegral total) * 100
-  termSize <- getTerminalSize
-  case termSize of
-    Nothing -> putText $ F.sformat ("Downloading: " % F.fixed 2 % "%") percent
-    Just (_, width) -> do
-      let barWidth = if width < 40 then 0 else min 50 (width - 30)
-          filled = round (percent / 100 * fromIntegral barWidth)
-          progressBar = replicate filled '=' ++ replicate (barWidth - filled) ' '
-      if barWidth > 0
-        then putText $ F.sformat ("Downloading: [" % F.string % "] " % F.float % "%") progressBar percent
-        else putText $ F.sformat ("Downloading: " % F.fixed 2 % "%") percent
-  hFlush stdout
+    truncateMiddle maxWidth str
+      | maxWidth <= 0 = ""
+      | length str <= maxWidth = str
+      | maxWidth <= 3 = take maxWidth str
+      | otherwise =
+          let keep = (maxWidth - 3) `div` 2
+           in take keep str <> "..." <> drop (length str - keep) str

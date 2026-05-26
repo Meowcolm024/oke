@@ -1,23 +1,29 @@
-module Oke.Bootstrap.App where
+module Oke.App.Run where
 
 import Control.Exception (bracket)
 import Data.Text.IO (hPutStrLn)
 import Effectful
-import Effectful.FileSystem
 import Network.HTTP.Client (Manager)
 import Network.HTTP.Client.TLS (newTlsManager)
-import Oke.Bootstrap.Context
-import Oke.Bootstrap.Log
-import Oke.Effect.Console
-import Oke.Effect.Context
-import Oke.Effect.Log
-import Oke.Effect.Network
+import Oke.App.Env
+import Oke.Core.State (AppState, emptyAppState)
+import Oke.Effect
+import Oke.Effect.Store
+import System.Log.Logger (Logger)
 import System.Posix.User (getEffectiveUserID)
 
-type App = Eff '[Network, Log, Ctx, FileSystem, Console, IOE] ()
+type App = Eff '[Store AppState, Network, Log, Ctx, FileSystem, Time, Console, IOE] ()
 
 runAppWith :: (Context, Logger, Manager) -> App -> IO ()
-runAppWith (ctx, logger, manager) = runEff . runConsole . runFileSystem . runContext ctx . runLog logger . runNetwork manager
+runAppWith (ctx, logger, manager) =
+  runEff
+    . runConsole
+    . runTime
+    . runFileSystem
+    . runCtx ctx
+    . runLog logger
+    . runNetwork manager
+    . runStore emptyAppState (statePath ctx)
 
 runApp :: App -> IO ()
 runApp app = abortAtRoot *> bracket initApp cleanupApp (`runAppWith` app)
@@ -27,6 +33,7 @@ runApp app = abortAtRoot *> bracket initApp cleanupApp (`runAppWith` app)
       ctx <- mkContext
       logger <- mkLogger (logPath ctx)
       manager <- newTlsManager
+      setupStore emptyAppState (statePath ctx)
       pure $ (ctx, logger, manager)
 
     cleanupApp :: (Context, Logger, Manager) -> IO ()

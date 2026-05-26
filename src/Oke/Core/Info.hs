@@ -4,16 +4,14 @@ import Data.Versions (prettyV)
 import Effectful
 import Formatting ((%))
 import Formatting qualified as F
-import Oke.Bootstrap.System
-import Oke.Effect.Console
-import Oke.Effect.Context
-import Oke.Effect.Log
+import Oke.App.Env
+import Oke.Effect
 import Oke.Util.Misc (okeVersion)
 import Path (fromAbsFile)
 
 info :: forall es. (Log :> es, Console :> es, Ctx :> es) => Eff es ()
 info = do
-  ctx <- getContext
+  ctx <- getCtx
   logDbg "show info"
   printfn ("Version: " % F.stext) okeVersion
   printfn
