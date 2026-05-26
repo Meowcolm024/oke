@@ -7,18 +7,33 @@ import Data.Aeson (decodeStrict)
 import Data.ByteString.Base16 qualified as B16
 import Data.Time qualified as T
 import Effectful
-import Effectful.Error.Static (Error, throwError)
+import Effectful.Error.Static (Error, runErrorNoCallStackWith, throwError)
 import Effectful.FileSystem.IO.ByteString
 import Network.URI.Static
 import Oke.App.Env (registryPath)
 import Oke.Core.Cask (Registry)
-import Oke.Core.Error
 import Oke.Core.State
 import Oke.Effect
 import Oke.Effect.FileSystem
 import Oke.Effect.Network (downloadWithStatus)
 import Oke.Effect.Store
 import Oke.Effect.Time (getCurrentTime)
+
+data RegError
+  = RegistryNotFound
+  | RegistryHashMismatch
+  | RegistryParseFailure
+  | StoreDecodeError !Text
+  deriving stock (Show, Eq)
+
+instance Exception RegError
+
+handleRegError :: forall es. (Log :> es) => Eff (Error RegError : es) () -> Eff es ()
+handleRegError = runErrorNoCallStackWith $ \case
+  RegistryNotFound -> logErr "No cask.json found, run: `oke update`"
+  RegistryHashMismatch -> logErr "Registry out of sync, run: `oke update`"
+  RegistryParseFailure -> logErr "cask.json is corrupted, run: `oke update`"
+  (StoreDecodeError msg) -> logErr $ "Error: " <> msg
 
 update ::
   forall es.

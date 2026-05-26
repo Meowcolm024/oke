@@ -8,10 +8,18 @@ import Effectful.Error.Static
 import Formatting ((%))
 import Formatting qualified as F
 import Oke.Core.Cask
-import Oke.Core.Error
-import Oke.Core.Registry (getRegistry)
+import Oke.Core.Registry
 import Oke.Core.State (AppState)
 import Oke.Effect
+
+data QueryError = QueryError Text [Text]
+  deriving stock (Show, Eq)
+
+instance Exception QueryError
+
+handleQueryError :: forall es. (Log :> es) => Eff (Error QueryError : es) () -> Eff es ()
+handleQueryError = runErrorNoCallStackWith $ \(QueryError term rs) ->
+  logErr $ F.sformat ("Cask '" % F.stext % "' not found, similar casks: " % F.stext) term (T.unwords rs)
 
 data QueryResult = QueryResult
   { score :: !Double,
@@ -32,12 +40,12 @@ queryCasks term registry = do
         Nothing -> pure []
         Just (score, _) -> pure [QueryResult score caskInfo]
 
-exactCask :: (Monad m) => Text -> Registry -> m (Either CaskInfo [QueryResult])
+exactCask :: forall es. (Error QueryError :> es) => Text -> Registry -> Eff es CaskInfo
 exactCask term registry = do
   result <- queryCasks term registry
-  pure $ case result of
-    (QueryResult {caskInfo} : _) | caskInfo.token == term -> Left caskInfo
-    rs -> Right rs
+  case result of
+    (QueryResult {caskInfo} : _) | caskInfo.token == term -> pure caskInfo
+    rs -> throwError $ QueryError term (map (token . caskInfo) rs)
 
 query ::
   forall es.
@@ -69,26 +77,20 @@ info ::
     FileSystem :> es,
     Store AppState :> es,
     Time :> es,
-    Error RegError :> es
+    Error RegError :> es,
+    Error QueryError :> es
   ) =>
   Text -> Eff es ()
 info term = do
   logDbg $ "info: " <> term
   registry <- getRegistry
-  result <- exactCask term registry
-  logDbg (show result)
-  case result of
-    Right [] -> printLn "No results found."
-    Right rs -> do
-      printfn ("Cask '" % F.stext % "' not found, similar casks:") term
-      let colWidth = maximum $ map (T.length . token . caskInfo) rs
-      forM_ rs (printLn . formatRow colWidth)
-    Left cask -> do
-      printfn ("Token: " % F.stext) cask.token
-      printfn ("Name: " % F.stext) (T.unwords cask.name)
-      printfn ("Version: " % F.stext) cask.version
-      printfn ("Description: " % F.stext) cask.desc
-      printfn ("Homepage: " % F.stext) cask.homepage
+  cask <- exactCask term registry
+  logDbg (show cask)
+  printfn ("Token: " % F.stext) cask.token
+  printfn ("Name: " % F.stext) (T.unwords cask.name)
+  printfn ("Version: " % F.stext) cask.version
+  printfn ("Description: " % F.stext) cask.desc
+  printfn ("Homepage: " % F.stext) cask.homepage
 
 formatRow :: Int -> QueryResult -> Text
 formatRow colWidth (QueryResult {caskInfo = CaskInfo {token, name, version}}) =
