@@ -81,6 +81,7 @@ library
     Oke.App.Run
     Oke.Core.Artifact
     Oke.Core.Cask
+    Oke.Core.Error
     Oke.Core.Query
     Oke.Core.Registry
     Oke.Core.State
@@ -92,6 +93,7 @@ library
     Oke.Effect.Network
     Oke.Effect.Store
     Oke.Effect.Time
+    Oke.Effect.Error
     Oke.Util.Plist
 
   other-modules: Paths_oke

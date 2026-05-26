@@ -4,9 +4,11 @@ import Data.Foldable (maximum)
 import Data.FuzzySet
 import Data.Text qualified as T
 import Effectful
+import Effectful.Error.Static
 import Formatting ((%))
 import Formatting qualified as F
 import Oke.Core.Cask
+import Oke.Core.Error
 import Oke.Core.Registry (getRegistry)
 import Oke.Core.State (AppState)
 import Oke.Effect
@@ -39,46 +41,54 @@ exactCask term registry = do
 
 query ::
   forall es.
-  (Log :> es, Console :> es, Ctx :> es, FileSystem :> es, Store AppState :> es, Time :> es) =>
+  ( Log :> es,
+    Console :> es,
+    Ctx :> es,
+    FileSystem :> es,
+    Store AppState :> es,
+    Time :> es,
+    Error RegError :> es
+  ) =>
   Text -> Eff es ()
 query term = do
   logDbg $ "query: " <> term
-  reg <- getRegistry
-  case reg of
-    Nothing -> pure () -- do nothing
-    Just registry -> do
-      result <- queryCasks term registry
-      logDbg (show result)
-      case result of
-        [] -> printLn "No results found."
-        rs ->
-          let colWidth = maximum $ map (T.length . token . caskInfo) rs
-           in forM_ rs (printLn . formatRow colWidth)
+  registry <- getRegistry
+  result <- queryCasks term registry
+  logDbg (show result)
+  case result of
+    [] -> printLn "No results found."
+    rs ->
+      let colWidth = maximum $ map (T.length . token . caskInfo) rs
+       in forM_ rs (printLn . formatRow colWidth)
 
 info ::
   forall es.
-  (Log :> es, Console :> es, Ctx :> es, FileSystem :> es, Store AppState :> es, Time :> es) =>
+  ( Log :> es,
+    Console :> es,
+    Ctx :> es,
+    FileSystem :> es,
+    Store AppState :> es,
+    Time :> es,
+    Error RegError :> es
+  ) =>
   Text -> Eff es ()
 info term = do
   logDbg $ "info: " <> term
-  reg <- getRegistry
-  case reg of
-    Nothing -> pure ()
-    Just registry -> do
-      result <- exactCask term registry
-      logDbg (show result)
-      case result of
-        Right [] -> printLn "No results found."
-        Right rs -> do
-          printfn ("Cask '" % F.stext % "' not found, similar casks:") term
-          let colWidth = maximum $ map (T.length . token . caskInfo) rs
-          forM_ rs (printLn . formatRow colWidth)
-        Left cask -> do
-          printfn ("Token: " % F.stext) cask.token
-          printfn ("Name: " % F.stext) (T.unwords cask.name)
-          printfn ("Version: " % F.stext) cask.version
-          printfn ("Description: " % F.stext) cask.desc
-          printfn ("Homepage: " % F.stext) cask.homepage
+  registry <- getRegistry
+  result <- exactCask term registry
+  logDbg (show result)
+  case result of
+    Right [] -> printLn "No results found."
+    Right rs -> do
+      printfn ("Cask '" % F.stext % "' not found, similar casks:") term
+      let colWidth = maximum $ map (T.length . token . caskInfo) rs
+      forM_ rs (printLn . formatRow colWidth)
+    Left cask -> do
+      printfn ("Token: " % F.stext) cask.token
+      printfn ("Name: " % F.stext) (T.unwords cask.name)
+      printfn ("Version: " % F.stext) cask.version
+      printfn ("Description: " % F.stext) cask.desc
+      printfn ("Homepage: " % F.stext) cask.homepage
 
 formatRow :: Int -> QueryResult -> Text
 formatRow colWidth (QueryResult {caskInfo = CaskInfo {token, name, version}}) =
