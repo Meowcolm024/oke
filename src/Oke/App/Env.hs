@@ -27,7 +27,7 @@ mkContext = do
   system <- getSystem
   cli <- getCLI
   _ <- getConfig (system.xdgDirs.xdgConfig)
-  -- TODO config should be normalized
+  -- TODO inline config
   pure $ Context system cli
 
 logPath :: Context -> Path Abs File

@@ -30,7 +30,7 @@ runStore emptySt path = interpret $ \_ -> \case
       if exists
         then
           eitherDecodeFileStrict statePath >>= \case
-            Left err -> fail err -- TODO handle err
+            Left err -> fail err -- TODO handle decode failure
             Right st -> pure st
         else pure emptySt
 

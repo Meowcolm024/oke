@@ -50,6 +50,7 @@ common shared
     effectful >=2.6 && <3,
     filelock >=0.1 && <0.2,
     formatting >=7.2 && <8,
+    fuzzyset >=0.3 && <0.4,
     hslogger >=1.3 && <2,
     http-client >=0.7 && <0.8,
     http-client-tls >=0.3 && <0.5,
@@ -79,7 +80,9 @@ library
     Oke.App.Env
     Oke.App.Run
     Oke.Core.Artifact
+    Oke.Core.Cask
     Oke.Core.Info
+    Oke.Core.Query
     Oke.Core.Registry
     Oke.Core.State
     Oke.Effect
